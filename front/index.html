@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> استخراج اطلاعات کارت ملی</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="bg-field" aria-hidden="true"></div>
+
+<div class="app">
+
+  <header class="header">
+    <div class="logo">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="8" cy="11" r="2"/><path d="M6 15c.5-1.5 3.5-1.5 4 0"/><line x1="14" y1="9" x2="19" y2="9"/><line x1="14" y1="13" x2="19" y2="13"/></svg>
+    </div>
+    <div class="header-text">
+      <span class="eyebrow"> احراز هویت تصویری</span>
+      <h1>استخراج اطلاعات کارت ملی</h1>
+      
+    </div>
+  </header>
+
+
+  <!-- پنل خطای سراسری: خطاهای سیستمی/HTTP دریافتی از بک‌اند -->
+  <div id="errorPanel" class="error-panel" hidden role="alert">
+    <div class="error-panel-head">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>خطا در پردازش</span>
+      <button type="button" id="errorDismiss" class="icon-btn" aria-label="بستن خطاها">✕</button>
+    </div>
+    <ul id="errorList" class="error-list"></ul>
+  </div>
+
+  <main class="grid">
+
+    <!-- ستون ۱:  اسکن -->
+    <section class="panel panel-scan">
+      <div class="panel-head">
+        <h2 class="step">۱) اسکن</h2>
+        <p class="panel-hint">دوربین را <strong>افقی</strong> نگه دارید؛ تصویر به‌صورت خودکار به‌شکل عمودی روی قاب می‌نشیند.</p>
+      </div>
+
+      <div class="toolbar">
+        <div class="select-wrap">
+          <label class="select-label" for="cameraUrlInput">آدرس استریم دوربین (پروکسی)</label>
+          <input type="text" id="cameraUrlInput" class="text-input" autocomplete="off" spellcheck="false">
+        </div>
+        <button id="connectBtn" class="btn ghost">اتصال</button>
+        <div id="statusBadge" class="status-badge">
+          <span class="dot"></span>
+          <span id="statusText">در انتظار اتصال به دوربین</span>
+        </div>
+      </div>
+
+      <!-- استیج عمودی: تصویر افقی دوربین درون آن چرخانده می‌شود -->
+      <div class="stage portrait-stage" id="stage">
+        <div class="camera-rotator" id="cameraRotator">
+          <img id="cameraStream" class="camera-feed" alt="استریم دوربین">
+        </div>
+
+        <!-- لایه رویی: ردیاب/قاب اسکن کارت ملی -->
+        <div class="overlay">
+          <div class="card-guide" id="cardGuide">
+            <div class="reticle corner-tl" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M31 1H9C4.58 1 1 4.58 1 9v22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <div class="reticle corner-tr" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M31 1H9C4.58 1 1 4.58 1 9v22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <div class="reticle corner-bl" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M31 1H9C4.58 1 1 4.58 1 9v22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+            <div class="reticle corner-br" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M31 1H9C4.58 1 1 4.58 1 9v22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+
+            <div class="scan-line" aria-hidden="true"></div>
+
+            <!-- کانتینر فیلدهای ROI (توسط JS پر می‌شود) -->
+            <div class="roi-layer" id="roiLayer"></div>
+          </div>
+          <div class="guide-label">کارت ملی را داخل کادر و هم‌راستا با گوشه‌ها قرار دهید</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="rotateBtn" class="btn icon-toggle" type="button" title="جهت چرخش تصویر را عوض کنید" aria-pressed="false">
+          <svg id="rotateIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.05-6.78"/><polyline points="21 3 21 9 15 9"/></svg>
+          <span id="rotateLabel">چرخش ساعتگرد</span>
+        </button>
+
+        <button id="captureBtn" class="capture-btn" disabled title="ثبت تصویر">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </button>
+
+        <label class="btn ghost upload-label">📁 آپلود تصویر<input type="file" id="fileInput" accept="image/*" hidden></label>
+      </div>
+
+      <div class="original-wrap" id="originalWrap" hidden>
+        <h3 class="sub-title">تصویر اصلی (مرجع بازبینی)</h3>
+        <img id="originalImage" alt="تصویر اصلی کارت">
+      </div>
+    </section>
+
+    <!-- ستون ۲: میز بازبینی -->
+    <section class="panel panel-desk">
+      <div class="panel-head">
+        <h2 class="step">۲)  بازبینی</h2>
+        <p class="panel-hint">مقادیر استخراج‌شده را بررسی، در صورت نیاز اصلاح و تأیید کنید.</p>
+      </div>
+
+      <div id="emptyState" class="empty">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h.01M15 9h.01M9 15c.7-1 2-1.6 3-1.6s2.3.6 3 1.6"/></svg>
+        <p>هنوز تصویری پردازش نشده است.</p>
+        <span>یک قاب از دوربین بگیرید یا تصویر کارت را آپلود کنید.</span>
+      </div>
+
+      <div id="reviewBanner" class="review-banner" hidden></div>
+
+      <div id="resultArea" hidden>
+        <div class="result-head">
+          <div class="photo-card" id="photoCard" hidden>
+            <img id="photoImg" alt="عکس پرسنلی">
+            <span id="photoStatus"></span>
+          </div>
+          <div class="meta" id="metaInfo"></div>
+        </div>
+
+        <form id="reviewForm" class="fields-grid" onsubmit="return false;"></form>
+
+        <div class="form-actions">
+          <button id="approveBtn" class="btn primary">تأیید نهایی اطلاعات</button>
+        </div>
+
+        <div id="warningsWrap" class="warnings-wrap" hidden>
+          <div class="warnings-head">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>هشدارهای بازبینی (<span id="warningsCount">0</span>)</span>
+          </div>
+          <ul id="warningsList" class="warnings-list"></ul>
+        </div>
+      </div>
+
+      <!-- کارت ثبت موفق: خلاصهٔ اطلاعات تأییدشده (بدون عکس) -->
+      <div id="successCard" class="success-card" hidden>
+        <div class="success-head">
+          <div class="success-check">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <h3>اطلاعات با موفقیت ثبت شد</h3>
+            <span id="successTimestamp" class="success-time"></span>
+          </div>
+        </div>
+
+        <dl id="successFields" class="id-card"></dl>
+
+        <div class="success-actions">
+          <details class="json-details">
+            <summary>جزئیات فنی (JSON)</summary>
+            <div class="json-actions">
+              <button id="copyBtn" class="btn ghost sm">کپی JSON</button>
+            </div>
+            <pre id="jsonOut" class="json-out" dir="ltr"></pre>
+          </details>
+          <button id="newCaseBtn" class="btn ghost" type="button">ثبت پروندهٔ جدید</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="preview-modal" id="previewModal">
+  <div class="preview-card">
+    <h3>پیش‌نمایش تصویر ثبت‌شده</h3>
+    <img id="previewImage" alt="پیش‌نمایش">
+    <div class="preview-actions">
+      <button id="retakeBtn" class="btn ghost">تلاش دوباره</button>
+      <button id="confirmBtn" class="btn primary">استفاده از این عکس</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

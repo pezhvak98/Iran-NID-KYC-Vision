@@ -60,7 +60,7 @@ The fastest way to run the full stack (backend, frontend, and OCR models):
 
 ```bash
 # 1. Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/pezhvak98/Iran-NID-KYC-Vision.git
 cd Iran-NID-KYC-Vision
 
 # 2. Build and run

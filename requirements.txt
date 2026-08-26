@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+python-multipart
+opencv-python-headless
+numpy
+easyocr
+requests
+jdatetime
+Pillow
+
+# اگر بعداً خواستید GPU را فعال کنید، قبل از easyocr نسخهٔ CUDA-دار torch
+# را مطابق دستورالعمل pytorch.org/get-started/locally نصب کنید؛ در غیر
+# این‌صورت easyocr خودش نسخهٔ CPU-only را نصب می‌کند و gpu=True بی‌اثر
+# می‌ماند. کد فعلی خودش با torch.cuda.is_available() تشخیص می‌دهد که آیا
+# GPU در دسترس هست یا نه، پس نیازی به تغییر کد نیست، فقط نصب torch مناسب.

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<title>کالیبراسیون نواحی فیلدهای کارت ملی</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #14161d;
+    --panel-border: #262a35;
+    --gold: #d4af37;
+    --gold-soft: #f0d98c;
+    --text: #e8e6df;
+    --text-dim: #9a9fab;
+    --green: #4ade80;
+    --amber: #f5b942;
+    --orange: #fb923c;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 600px at 50% -10%, #1a1d27 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: "Vazirmatn", "Segoe UI", Tahoma, sans-serif;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 0 0 4px;
+    color: var(--gold-soft);
+    letter-spacing: 0.3px;
+  }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-bottom: 18px; }
+  .privacy {
+    background: #10241a;
+    border: 1px solid #1f4a34;
+    color: #86efac;
+    font-size: 12.5px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 18px;
+    display: inline-block;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 18px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .file-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  input[type="file"] {
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  #canvasWrap {
+    position: relative;
+    border: 1px dashed var(--panel-border);
+    border-radius: 8px;
+    overflow: auto;
+    background: #05060a;
+    min-height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  canvas { cursor: crosshair; display: block; }
+  .empty-hint { color: var(--text-dim); font-size: 13px; padding: 40px; text-align: center; }
+  .current-field {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #1c1200;
+    border: 1px solid #3a2a00;
+    color: var(--gold-soft);
+    font-size: 14px;
+  }
+  .current-field b { color: #fff; }
+  .field-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .field-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border);
+    background: #0f1117;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .field-item:hover { border-color: var(--gold); }
+  .field-item.active { border-color: var(--gold); background: #1c1a0e; }
+  .field-item.done .dot { background: var(--green); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #444; flex-shrink: 0; }
+  .field-name { display: flex; align-items: center; gap: 8px; }
+  .field-coords { color: var(--text-dim); font-size: 11px; direction: ltr; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .kind-number { background: var(--amber); }
+  .kind-text { background: var(--green); }
+  .kind-date { background: var(--orange); }
+  .kind-photo { background: var(--red); }
+  .btn {
+    background: linear-gradient(180deg, #2a2410, #1a1608);
+    border: 1px solid var(--gold);
+    color: var(--gold-soft);
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .btn:hover { background: #2a2410; }
+  .btn.secondary {
+    border-color: var(--panel-border);
+    color: var(--text-dim);
+    background: transparent;
+  }
+  .btn.secondary:hover { color: var(--text); border-color: var(--text-dim); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  textarea {
+    width: 100%;
+    height: 240px;
+    margin-top: 14px;
+    background: #05060a;
+    color: #a5d6ff;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    font-family: "Cascadia Code", Consolas, monospace;
+    font-size: 12.5px;
+    padding: 10px;
+    direction: ltr;
+    text-align: left;
+    resize: vertical;
+  }
+  .zoom-row { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
+  .zoom-row span { font-size: 12px; color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+  <h1>کالیبراسیون نواحی فیلدهای کارت ملی (ROI Calibrator)</h1>
+  <div class="subtitle">تصویر را بارگذاری کنید، دور هر فیلد یک کادر بکشید، و کد Python نهایی را کپی کنید.</div>
+  <div class="privacy">🔒 این تصویر فقط داخل مرورگر شما پردازش می‌شود و به هیچ سروری ارسال نمی‌شود.</div>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="file-row">
+        <input type="file" id="fileInput" accept="image/*" />
+        <div class="zoom-row">
+          <span>بزرگ‌نمایی</span>
+          <input type="range" id="zoom" min="0.5" max="3" step="0.1" value="1" />
+        </div>
+      </div>
+
+      <div id="canvasWrap">
+        <div class="empty-hint" id="emptyHint">
+          تصویر خروجی <code>/api/v1/debug/layout?annotate=false</code> را اینجا بارگذاری کنید
+          (همان تصویری که بک‌اند واقعاً برای برش فیلدها استفاده می‌کند).
+        </div>
+        <canvas id="canvas" style="display:none"></canvas>
+      </div>
+
+      <div class="current-field" id="currentFieldBox">
+        فایل تصویر را انتخاب کنید تا شروع کنیم.
+      </div>
+
+      <div class="actions">
+        <button class="btn secondary" id="undoBtn" disabled>پاک کردن فیلد فعلی</button>
+        <button class="btn secondary" id="resetBtn" disabled>پاک کردن همه</button>
+        <button class="btn" id="generateBtn" disabled>ساخت کد Python</button>
+      </div>
+
+      <textarea id="output" readonly placeholder="بعد از کشیدن کادرها، دکمهٔ «ساخت کد Python» را بزنید..."></textarea>
+      <div class="actions">
+        <button class="btn secondary" id="copyBtn" disabled>کپی کد</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div style="font-size:13px; color: var(--text-dim); margin-bottom: 6px;">فیلدها (به ترتیب کلیک کنید یا بکشید)</div>
+      <div class="field-list" id="fieldList"></div>
+    </div>
+  </div>
+
+<script>
+  const FIELDS = [
+    { key: "national_id", label: "شماره ملی", kind: "number" },
+    { key: "first_name", label: "نام", kind: "text" },
+    { key: "last_name", label: "نام خانوادگی", kind: "text" },
+    { key: "birth_date", label: "تاریخ تولد", kind: "date" },
+    { key: "father_name", label: "نام پدر", kind: "text" },
+    { key: "expiry_date", label: "پایان اعتبار", kind: "date" },
+    { key: "photo", label: "عکس", kind: "photo" },
+  ];
+
+  const KIND_COLOR = {
+    number: "#f5b942",
+    text: "#4ade80",
+    date: "#fb923c",
+    photo: "#f87171",
+  };
+
+  const fileInput = document.getElementById("fileInput");
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+  const emptyHint = document.getElementById("emptyHint");
+  const currentFieldBox = document.getElementById("currentFieldBox");
+  const fieldListEl = document.getElementById("fieldList");
+  const undoBtn = document.getElementById("undoBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const generateBtn = document.getElementById("generateBtn");
+  const copyBtn = document.getElementById("copyBtn");
+  const output = document.getElementById("output");
+  const zoomSlider = document.getElementById("zoom");
+
+  let img = null;
+  let baseScale = 1;   // scale to fit image reasonably on load
+  let userZoom = 1;
+  let boxes = {};       // key -> {x1,y1,x2,y2} in NATURAL image pixel coords
+  let activeIndex = 0;
+  let dragging = false;
+  let dragStart = null;
+  let dragCurrent = null;
+
+  function totalScale() { return baseScale * userZoom; }
+
+  function renderFieldList() {
+    fieldListEl.innerHTML = "";
+    FIELDS.forEach((f, i) => {
+      const item = document.createElement("div");
+      item.className = "field-item" + (i === activeIndex ? " active" : "") + (boxes[f.key] ? " done" : "");
+      const coords = boxes[f.key]
+        ? normalizedBoxText(f.key)
+        : "کشیده نشده";
+      item.innerHTML = `
+        <div class="field-name">
+          <span class="dot"></span>
+          <span class="swatch kind-${f.kind}"></span>
+          ${f.label}
+        </div>
+        <div class="field-coords">${coords}</div>
+      `;
+      item.addEventListener("click", () => { activeIndex = i; refreshUI(); });
+      fieldListEl.appendChild(item);
+    });
+  }
+
+  function normalizedBoxText(key) {
+    const n = normalizedBox(key);
+    if (!n) return "";
+    return `[${n.map(v => v.toFixed(3)).join(", ")}]`;
+  }
+
+  function normalizedBox(key) {
+    const b = boxes[key];
+    if (!b || !img) return null;
+    const x1 = Math.min(b.x1, b.x2) / img.naturalWidth;
+    const y1 = Math.min(b.y1, b.y2) / img.naturalHeight;
+    const x2 = Math.max(b.x1, b.x2) / img.naturalWidth;
+    const y2 = Math.max(b.y1, b.y2) / img.naturalHeight;
+    return [x1, y1, x2, y2];
+  }
+
+  function refreshUI() {
+    renderFieldList();
+    const f = FIELDS[activeIndex];
+    currentFieldBox.innerHTML = img
+      ? `در حال کشیدن کادر برای: <b>${f.label}</b> <span class="swatch kind-${f.kind}" style="display:inline-block;vertical-align:middle;margin-inline-start:6px;"></span>`
+      : "فایل تصویر را انتخاب کنید تا شروع کنیم.";
+    undoBtn.disabled = !boxes[f.key];
+    resetBtn.disabled = Object.keys(boxes).length === 0;
+    generateBtn.disabled = !img;
+    draw();
+  }
+
+  function draw() {
+    if (!img) return;
+    const w = img.naturalWidth * totalScale();
+    const h = img.naturalHeight * totalScale();
+    canvas.width = w;
+    canvas.height = h;
+    ctx.drawImage(img, 0, 0, w, h);
+
+    FIELDS.forEach(f => {
+      const b = boxes[f.key];
+      if (!b) return;
+      drawRect(b.x1 * totalScale(), b.y1 * totalScale(), b.x2 * totalScale(), b.y2 * totalScale(), KIND_COLOR[f.kind], f.label, f.key === FIELDS[activeIndex].key);
+    });
+
+    if (dragging && dragStart && dragCurrent) {
+      const f = FIELDS[activeIndex];
+      drawRect(dragStart.x, dragStart.y, dragCurrent.x, dragCurrent.y, KIND_COLOR[f.kind], f.label, true);
+    }
+  }
+
+  function drawRect(x1, y1, x2, y2, color, label, emphasize) {
+    const rx1 = Math.min(x1, x2), ry1 = Math.min(y1, y2);
+    const rw = Math.abs(x2 - x1), rh = Math.abs(y2 - y1);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = emphasize ? 2.5 : 1.5;
+    ctx.strokeRect(rx1, ry1, rw, rh);
+    ctx.fillStyle = color;
+    ctx.font = "11px sans-serif";
+    ctx.fillText(label, rx1 + 3, Math.max(11, ry1 - 4));
+  }
+
+  function canvasPoint(evt) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: Math.min(Math.max(evt.clientX - rect.left, 0), canvas.width),
+      y: Math.min(Math.max(evt.clientY - rect.top, 0), canvas.height),
+    };
+  }
+
+  canvas.addEventListener("mousedown", (e) => {
+    if (!img) return;
+    dragging = true;
+    dragStart = canvasPoint(e);
+    dragCurrent = dragStart;
+  });
+
+  canvas.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    dragCurrent = canvasPoint(e);
+    draw();
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    dragCurrent = canvasPoint(e);
+    draw();
+  });
+
+  window.addEventListener("mouseup", (e) => {
+    if (!dragging) return;
+    dragging = false;
+    const end = canvasPoint(e);
+    const key = FIELDS[activeIndex].key;
+    const s = totalScale();
+    boxes[key] = {
+      x1: dragStart.x / s,
+      y1: dragStart.y / s,
+      x2: end.x / s,
+      y2: end.y / s,
+    };
+    if (activeIndex < FIELDS.length - 1) activeIndex++;
+    refreshUI();
+  });
+
+  fileInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const image = new Image();
+      image.onload = () => {
+        img = image;
+        boxes = {};
+        activeIndex = 0;
+        emptyHint.style.display = "none";
+        canvas.style.display = "block";
+        const wrapWidth = document.getElementById("canvasWrap").clientWidth || 700;
+        baseScale = Math.min(1, (wrapWidth - 20) / img.naturalWidth);
+        userZoom = 1;
+        zoomSlider.value = 1;
+        refreshUI();
+      };
+      image.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  zoomSlider.addEventListener("input", () => {
+    userZoom = parseFloat(zoomSlider.value);
+    draw();
+  });
+
+  undoBtn.addEventListener("click", () => {
+    delete boxes[FIELDS[activeIndex].key];
+    refreshUI();
+  });
+
+  resetBtn.addEventListener("click", () => {
+    boxes = {};
+    activeIndex = 0;
+    refreshUI();
+  });
+
+  generateBtn.addEventListener("click", () => {
+    const lines = [];
+    lines.push("FIELD_ROIS: dict[str, dict] = {");
+    FIELDS.forEach(f => {
+      const n = normalizedBox(f.key);
+      if (!n) {
+        lines.push(`    # "${f.key}": کادر کشیده نشده — این فیلد را رد نکنید`);
+        return;
+      }
+      const boxStr = n.map(v => v.toFixed(3)).join(", ");
+      lines.push(`    "${f.key}": {"box": [${boxStr}], "kind": "${f.kind}"},`);
+    });
+    lines.push("}");
+    output.value = lines.join("\n");
+    copyBtn.disabled = false;
+  });
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(output.value);
+      copyBtn.textContent = "کپی شد ✓";
+      setTimeout(() => (copyBtn.textContent = "کپی کد"), 1500);
+    } catch (e) {
+      output.select();
+      document.execCommand("copy");
+    }
+  });
+
+  refreshUI();
+</script>
+</body>
+</html>

@@ -6,6 +6,9 @@ Iran-NID-KYC-Vision is a CPU-friendly pipeline for extracting structured data fr
 
 The system is built for KYC (Know Your Customer) contexts, where silent misreads are unacceptable: ambiguous or low-confidence extractions are surfaced to a human operator rather than guessed.
 
+
+
+![Flow](./flow.jpg)
 ---
 
 ## Table of Contents

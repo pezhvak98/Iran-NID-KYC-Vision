@@ -1,0 +1,7 @@
+services:
+  kyc:
+    build: .
+    container_name: iranid-vision
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
